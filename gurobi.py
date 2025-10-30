@@ -67,7 +67,8 @@ MCNTA = {a: 100_000 for a in A}  # fix
 CNT = 0.02
 ALPHA = 0.2  # 20% de la cantidad percibida original
 BETA = np.array([0.2, 0.6, 0.3])
-DM = 1.5  # en kilometros
+DM = 1.5  # en kilometros, distancia entre relaves
+DMU = 10  # NEW, en kilometros, distancia entre relave-ciudad
 # conversion: 1.5 km = 0.02126° (latitud, longitud) ; 1° = 70.5550329 km
 LAMBDA = np.array([0.35, 0.35, 0.30])
 
@@ -102,7 +103,10 @@ md.addConstrs(XTR[p] + quicksum(XF[p, f] for f in F) + XS[p] == 0 for p in P if 
 md.addConstrs(quicksum(XT[p, pp] for pp in P) <= M * XTR[p] for p in P)
 md.addConstrs(W[p, pp] <= M * XT[p, pp] for p in P for pp in P if p != pp)
 md.addConstrs(M * (1 - (XTR[p] + quicksum(XF[p, f] for f in F) + XS[p])) >= quicksum(XT[pp, p] for pp in P) for p in P)
-md.addConstrs(Y[p] >= quicksum(XT[p, pp] for pp in P) for p in P)
+md.addConstrs(M * Y[p] >= quicksum(XT[p, pp] for pp in P) for p in P)  # NEW
+md.addConstrs(M * Y[p] >= 1 - XTR[p] for p in D)  # NEW, si no se ha transladado nada en d entonces es un relave (Y = 1)
+md.addConstrs(quicksum(XT[p, pp] for pp in P) <= 1 for p in P)  # NEW, se puede transladar a lo más a 1 lugar
+
 print("- Restricciones de variables: Done")
 # restricciones de presupuesto
 print("- Restricciones de presupuesto")
@@ -132,7 +136,7 @@ print("- Restricciones de contaminación: Done")
 # restricciones de distancia
 print("- Restricciones de distancia")
 md.addConstrs(L(p, pp) + M * (1 - Y[p]) >= DM for p in P for pp in P if p != pp)  # NEW
-md.addConstrs(L(p, u) + M * (1 - Y[p]) >= DM for p in P for u in U)  # NEW
+md.addConstrs(L(p, u) + M * (1 - Y[p]) >= DMU for p in P for u in U)  # NEW
 md.addConstrs(K[u] == 0 for u in U)
 print("- Restricciones de distancia: Done")
 print(f"Done in {round(time.time() - comienzo)}s")

@@ -48,7 +48,7 @@ def solucion_a_vector(path, output_path, shapefile_crs_path):
 
 
 if __name__ == '__main__':
-    generar_grid = True
+    generar_grid = False
     generar_sol = True
 
     if generar_grid:

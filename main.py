@@ -141,10 +141,15 @@ print(f"Tiempo total: {round(time.time() - inicio)}s")
 valor_objetivo = md.ObjVal
 tiempo_ejecucion = md.Runtime
 
+print(f"El beneficio social alcanzado fue de {valor_objetivo}")
+
 with open(PUNTOS_SOL_PATH, 'w', encoding='utf-8') as archivo:
     print("longitud,latitud,medida", file=archivo)  # header
     for p in P:
         hizo_algo = False
+        if K[p].x != 0:
+            print(f"En la posición {p} hay {K[p].x} toneladas de relave")
+
         for pp in P:
             if XT[p, pp].x == 1:
                 hizo_algo = True

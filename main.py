@@ -3,6 +3,7 @@ import time
 import itertools
 import numpy as np
 from random import randint
+import math
 import pandas as pd
 from funciones import leer_puntos, leer_cantidades_iniciales, haversine
 from parametros import PUNTOS_PATH, DEPOSITOS_PATH, PUNTOS_SOL_PATH, PARAMETROS_PATH
@@ -30,32 +31,28 @@ F = [i for i in range(3)]
 
 # -------   parametros   -------
 parametros_archivo = pd.read_csv(PARAMETROS_PATH)
-parametros = {col: parametros_archivo[col].tolist() for col in parametros_archivo.columns}
+parametros = {
+    col: [x for x in parametros_archivo[col].to_list() if not (pd.isna(x) or (isinstance(x, float) and math.isnan(x)))]
+    for col in parametros_archivo.columns
+}
 
-PS = 50_000_000**2
-M = PS
-T = np.array([randint(27, 21_244_362) for _ in P])
-CT = np.array([randint(200, 1000) for _ in P])
-CF = [
-    [randint(5, 50) for _ in P],
-    [randint(25, 200) for _ in P],
-    [randint(200, 800) for _ in P],
-]
-CS = np.array([randint(10_000, 100_000_000) for _ in P])
+T = parametros['Tp (ton)'] + [randint(108_735, 21_244_362) for _ in range(len(P) - len(D))]
+CT = parametros['CTd (USD/km)']
+CF = parametros['CFdf (USD/ton)']
+CS = parametros['CSd  (USD)'] + [randint(10_000, 100_000_000) for _ in range(len(P) - len(D))]
 # para ahorrar runtime (no es una variable, siempre va a ser igual para el mismo p, pp)
 L = lambda p, pp: haversine(puntos[p], puntos[pp])
-KI = leer_cantidades_iniciales(DEPOSITOS_PATH) + [0 for _ in range(len(P) - len(D))]  # 0 tons para cada posición nueva
-MCNTU = {u: randint(90, 100) for u in U}
-MCNTA = {a: randint(50, 90) for a in A}
-MCNTU = {u: 100_000 for u in U}  # fix
-MCNTA = {a: 100_000 for a in A}  # fix
-CNT = 0.02
-ALPHA = 0.2  # 20% de la cantidad percibida original
-BETA = np.array([0.2, 0.6, 0.3])
-DM = 1.5  # en kilometros, distancia entre relaves
-DMU = 10  # NEW, en kilometros, distancia entre relave-ciudad
+KI = parametros['Klp (ton)'] + [0 for _ in range(len(P) - len(D))]  # 0 tons para cada posición nueva
+MCNTU = parametros['MCNTu (µg/m3)']
+MCNTA = parametros['MCNTa (mg/l)']
+CNT = parametros['CNT (µg/m3)']
+ALPHA = parametros['alpha']
+BETA = parametros['beta f']
+DM = parametros['DM (km)']  # en kilometros, distancia entre relaves
 # conversion: 1.5 km = 0.02126° (latitud, longitud) ; 1° = 70.5550329 km
-LAMBDA = np.array([0.35, 0.35, 0.30])
+LAMBDA = parametros['lambda k']
+PS = parametros['PS (USD)']
+M = PS
 
 
 # -------   variables    -------
@@ -124,7 +121,7 @@ print("- Restricciones de contaminación: Done")
 # restricciones de distancia
 print("- Restricciones de distancia")
 md.addConstrs(L(p, pp) + M * (1 - Y[p]) >= DM for p in P for pp in P if p != pp)  # NEW
-md.addConstrs(L(p, u) + M * (1 - Y[p]) >= DMU for p in P for u in U)  # NEW
+md.addConstrs(L(p, u) + M * (1 - Y[p]) >= DM for p in P for u in U)  # NEW
 md.addConstrs(K[u] == 0 for u in U)
 print("- Restricciones de distancia: Done")
 print(f"Done in {round(time.time() - comienzo)}s")

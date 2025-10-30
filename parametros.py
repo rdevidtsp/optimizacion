@@ -12,3 +12,5 @@ PUNTOS_PATH = os.path.join(DATA_PATH, 'conjunto-puntos.csv')
 
 # usado para separar los grids una cierta cantidad (higher = closer points)
 GRID_TILES_AVG = 10
+
+DEBUG = True

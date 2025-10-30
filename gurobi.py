@@ -3,7 +3,6 @@ import time
 import itertools
 import numpy as np
 from random import randint
-from functools import partial
 from funciones import leer_puntos, leer_cantidades_iniciales, haversine
 from parametros import PUNTOS_PATH, DEPOSITOS_PATH, DEBUG, PUNTOS_SOL_PATH
 
@@ -14,15 +13,6 @@ md = Model()
 
 # -------   conjuntos    -------
 puntos, P, U, D, A = leer_puntos(PUNTOS_PATH)
-
-testing = False
-if testing:
-    P = [i for i in range(10)]
-    U = [1, 2, 3, 4]
-    D = [5, 6, 7]
-    A = [8]
-print(f"Len puntos: {len(puntos)}")
-print(f"- Zonas urbanas: {len(U)}, - Depósitos de relave: {len(D)}, - Fuentes de agua: {len(A)}")
 
 """
 Los conjuntos P, U, D, A son:
@@ -39,24 +29,16 @@ F = [i for i in range(3)]
 
 # -------   parametros   -------
 
-# https://chatgpt.com/share/6902e76e-25c8-8003-bca3-a897298d21ce
-PS = 50_000_000**2  # fix
-# big numba
+PS = 50_000_000**2
 M = PS
 T = np.array([randint(27, 21_244_362) for _ in P])
-# de excel con depositos: =MAX(IF((V8:V843<>0) * (Q8:Q843={"INACTIVO","ABANDONADO"}) * (G8:G843="COPIAPO"), V8:V843))
-# https://www.researchgate.net/figure/Tonnage-amount-of-tailings-stored-in-large-tailings-storage-facilities-per-region-in_fig12_364310393
 CT = np.array([randint(200, 1000) for _ in P])
-# https://www.subtrans.gob.cl/wp-content/uploads/2020/09/Actualizacio%CC%81n-de-Modelo-de-Costos-de-Transporte-de-Carga-para-el-Ana%CC%81lisis-de-Costos-Logi%CC%81sticos-del-Observatorio-Logi%CC%81stico.pdf
 CF = [
     [randint(5, 50) for _ in P],
     [randint(25, 200) for _ in P],
     [randint(200, 800) for _ in P],
 ]
-# https://www.mdpi.com/2071-1050/17/13/5688
 CS = np.array([randint(10_000, 100_000_000) for _ in P])
-# https://dnr.alaska.gov/mlw/mining/large-mines/pdf/rcindirects_dowlreport20150407.pdf
-# mala práctica pero defino el parametro L como una función que calcula la distancia entre dos puntos
 # para ahorrar runtime (no es una variable, siempre va a ser igual para el mismo p, pp)
 L = lambda p, pp: haversine(puntos[p], puntos[pp])
 KI = leer_cantidades_iniciales(DEPOSITOS_PATH) + [0 for _ in range(len(P) - len(D))]  # 0 tons para cada posición nueva
@@ -96,6 +78,8 @@ print(f"Done in {round(time.time() - comienzo)}s")
 # -------  restricciones -------
 print("Aplicando restricciones...")
 comienzo = time.time()
+
+
 # restricciones de variables
 print("- Restricciones de variables")
 md.addConstrs(XTR[p] + quicksum(XF[p, f] for f in F) + XS[p] <= 1 for p in D)
@@ -106,8 +90,8 @@ md.addConstrs(M * (1 - (XTR[p] + quicksum(XF[p, f] for f in F) + XS[p])) >= quic
 md.addConstrs(M * Y[p] >= quicksum(XT[p, pp] for pp in P) for p in P)  # NEW
 md.addConstrs(M * Y[p] >= 1 - XTR[p] for p in D)  # NEW, si no se ha transladado nada en d entonces es un relave (Y = 1)
 md.addConstrs(quicksum(XT[p, pp] for pp in P) <= 1 for p in P)  # NEW, se puede transladar a lo más a 1 lugar
-
 print("- Restricciones de variables: Done")
+
 # restricciones de presupuesto
 print("- Restricciones de presupuesto")
 md.addConstrs(KA[p, f] <= M * XF[p, f] for p in D for f in F)
@@ -117,6 +101,7 @@ md.addConstr(quicksum(quicksum(W[p, pp] * L(p, pp) for pp in P) * CT[p] + quicks
 md.addConstrs(K[p] == KI[p] + quicksum(W[i, p] for i in P) - quicksum(W[p, j] for j in P) for p in P)
 md.addConstrs(K[p] <= T[p] for p in P)
 print("- Restricciones de presupuesto: Done")
+
 # restricciones de contaminación
 print("- Restricciones de contaminación")
 md.addConstrs(Z[p] == K[p] * CNT for p in P)
@@ -126,13 +111,13 @@ md.addConstrs(ZV[p] - BETA[f] * Z[p] <= M * (1 - XF[p, f]) for p in P for f in F
 md.addConstrs(ZV[p] - BETA[f] * Z[p] >= -M * (1 - XF[p, f]) for p in P for f in F)
 md.addConstrs(ZV[p] - Z[p] <= M * (quicksum(XF[p, f] for f in F) + XS[p]) for p in P)
 md.addConstrs(ZV[p] - Z[p] >= -M * (quicksum(XF[p, f] for f in F) + XS[p]) for p in P)
-
 md.addConstrs(quicksum(ZV[p] / L(p, u) for p in P if p != u) <= MCNTU[u] for u in U)
 md.addConstrs(quicksum(ZV[p] / L(p, a) for p in P if p != a) <= MCNTA[a] for a in A)
 md.addConstrs(MCNTU[u] - quicksum(ZV[p] / L(p, u) for p in P if p != u) == C[u] for u in U)
 md.addConstrs(MCNTA[a] - quicksum(ZV[p] / L(p, a) for p in P if p != a) == C[a] for a in A)
 md.addConstrs(C[p] == 0 for p in P if p not in (U + A))
 print("- Restricciones de contaminación: Done")
+
 # restricciones de distancia
 print("- Restricciones de distancia")
 md.addConstrs(L(p, pp) + M * (1 - Y[p]) >= DM for p in P for pp in P if p != pp)  # NEW
@@ -141,25 +126,16 @@ md.addConstrs(K[u] == 0 for u in U)
 print("- Restricciones de distancia: Done")
 print(f"Done in {round(time.time() - comienzo)}s")
 
+
 md.update()
 
 # -------  función obj  -------
 print("Agregando función objetivo...")
 md.setObjective(quicksum(LAMBDA[0] * quicksum(XF[p, f] for f in F) + LAMBDA[1] * XS[p] + LAMBDA[2] * C[p] for p in P), GRB.MAXIMIZE)
 print("Optimizando...")
-# md.setParam(GRB.Param.DualReductions, 0)
-# md.setParam(GRB.Param.Presolve, 0)
+
 md.optimize()
 print(f"Tiempo total: {round(time.time() - inicio)}s")
-
-# --------    debug    --------
-if DEBUG:
-    if md.status == GRB.INFEASIBLE:
-        print("Modelo infactible. Corriendo IIS...")
-        md.computeIIS()
-        md.write("infeasible_constraints.ilp")
-    if md.status == GRB.INF_OR_UNBD:
-        print("Modelo no acotado. Revisa las restricciones o límites de variables.")
 
 # ------   resultados   ------
 valor_objetivo = md.ObjVal

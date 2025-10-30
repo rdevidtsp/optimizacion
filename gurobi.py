@@ -5,7 +5,7 @@ import numpy as np
 from random import randint
 from functools import partial
 from funciones import leer_puntos, leer_cantidades_iniciales, haversine
-from parametros import PUNTOS_PATH, DEPOSITOS_PATH, DEBUG
+from parametros import PUNTOS_PATH, DEPOSITOS_PATH, DEBUG, PUNTOS_SOL_PATH
 
 
 # ------- iniciar modelo -------
@@ -56,9 +56,8 @@ CF = [
 # https://www.mdpi.com/2071-1050/17/13/5688
 CS = np.array([randint(10_000, 100_000_000) for _ in P])
 # https://dnr.alaska.gov/mlw/mining/large-mines/pdf/rcindirects_dowlreport20150407.pdf
-# Mapeo todas las distancias entre puntos (oh boy)
-print("takes a WHILE")
-# L = {(p, pp): haversine(puntos[p], puntos[pp]) for p in P for pp in P}
+# mala práctica pero defino el parametro L como una función que calcula la distancia entre dos puntos
+# para ahorrar runtime (no es una variable, siempre va a ser igual para el mismo p, pp)
 L = lambda p, pp: haversine(puntos[p], puntos[pp])
 KI = leer_cantidades_iniciales(DEPOSITOS_PATH) + [0 for _ in range(len(P) - len(D))]  # 0 tons para cada posición nueva
 MCNTU = {u: randint(90, 100) for u in U}
@@ -147,7 +146,7 @@ print("Optimizando...")
 # md.setParam(GRB.Param.DualReductions, 0)
 # md.setParam(GRB.Param.Presolve, 0)
 md.optimize()
-print(f"Tiempo total: {round(time.time() - inicio)}")
+print(f"Tiempo total: {round(time.time() - inicio)}s")
 
 # --------    debug    --------
 if DEBUG:
@@ -162,21 +161,27 @@ if DEBUG:
 valor_objetivo = md.ObjVal
 tiempo_ejecucion = md.Runtime
 
-for p in P:
-    hizo_algo = False
-    for pp in P:
-        if XT[p, pp].x == 1:
+with open(PUNTOS_SOL_PATH, 'w', encoding='utf-8') as archivo:
+    print("longitud,latitud,medida", file=archivo)  # header
+    for p in P:
+        hizo_algo = False
+        for pp in P:
+            if XT[p, pp].x == 1:
+                hizo_algo = True
+                print(f"El depósito en la posición {p} se movió a {pp}")
+                print(f"{puntos[pp].x},{puntos[pp].y},T", file=archivo)
+
+        for f in F:
+            if XF[p, f].x == 1:
+                hizo_algo = True
+                print(f"Se aplicó el método {f} al depósito de relave en la posición {p}")
+                print(f"{puntos[p].x},{puntos[p].y},F{f}", file=archivo)
+
+        if XS[p].x == 1:
             hizo_algo = True
-            print(f"El depósito en la posición {p} se movió a {pp}")
+            print(f"Se selló el depósito en {p}")
+            print(f"{puntos[p].x},{puntos[p].y},S", file=archivo)
 
-    for f in F:
-        if XF[p, f].x == 1:
-            hizo_algo = True
-            print(f"Se aplicó el método {f} al depósito de relave en la posición {p}")
-
-    if XS[p].x == 1:
-        hizo_algo = True
-        print(f"Se selló el depósito en {p}")
-
-    if not hizo_algo and p in D:
-        print(f"La posición {p} se mantuvo en el mismo lugar")
+        if not hizo_algo and p in D:
+            print(f"La posición {p} se mantuvo en el mismo lugar")
+            print(f"{puntos[p].x},{puntos[p].y},M", file=archivo)

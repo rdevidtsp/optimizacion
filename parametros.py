@@ -15,6 +15,7 @@ PUNTOS_SOL_PATH = os.path.join(DATA_PATH, 'puntos-solucion', 'conjunto-puntos.cs
 VECTOR_PATH = os.path.join(DATA_PATH, 'vector-layer', 'vector-layer.shp')
 VECTOR_SOL_PATH = os.path.join(DATA_PATH, 'vector-layer-sol', 'vector-layer.gpkg')
 
+PARAMETROS_PATH = os.path.join(DATA_PATH, 'parametros.csv')
 # usado para separar los grids una cierta cantidad (higher = closer points)
 GRID_TILES_AVG = 50
 

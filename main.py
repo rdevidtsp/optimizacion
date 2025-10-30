@@ -3,8 +3,9 @@ import time
 import itertools
 import numpy as np
 from random import randint
+import pandas as pd
 from funciones import leer_puntos, leer_cantidades_iniciales, haversine
-from parametros import PUNTOS_PATH, DEPOSITOS_PATH, DEBUG, PUNTOS_SOL_PATH
+from parametros import PUNTOS_PATH, DEPOSITOS_PATH, PUNTOS_SOL_PATH, PARAMETROS_PATH
 
 
 # ------- iniciar modelo -------
@@ -28,6 +29,8 @@ dentro de la lista "puntos".
 F = [i for i in range(3)]
 
 # -------   parametros   -------
+parametros_archivo = pd.read_csv(PARAMETROS_PATH)
+parametros = {col: parametros_archivo[col].tolist() for col in parametros_archivo.columns}
 
 PS = 50_000_000**2
 M = PS

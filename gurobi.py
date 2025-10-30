@@ -3,7 +3,7 @@ import time
 import itertools
 import numpy as np
 from random import randint
-from funciones import leer_puntos, leer_cantidades_iniciales, distancia_puntos
+from funciones import leer_puntos, leer_cantidades_iniciales, haversine
 from parametros import PUNTOS_PATH, DEPOSITOS_PATH
 
 
@@ -13,7 +13,17 @@ md = Model()
 
 # -------   conjuntos    -------
 puntos, P, U, D, A = leer_puntos(PUNTOS_PATH)
+
+testing = False
+if testing:
+    from shapely.geometry import Point
+    puntos = [Point(-27.038327, -69.736009), Point(-27.55184, -70.51589), Point(-27.387969, -70.341310), Point(-26.93326, -69.09210)]
+    P = [i for i in range(4)]
+    U = [1]
+    D = [2]
+    A = [3]
 print(f"Len puntos: {len(puntos)}")
+print(f"- Zonas urbanas: {len(U)}, - Depósitos de relave: {len(D)}, - Fuentes de agua: {len(A)}")
 
 """
 Los conjuntos P, U, D, A son:
@@ -45,7 +55,7 @@ CF = [
 CS = np.array([randint(10_000, 100_000_000) for _ in P])
 # https://dnr.alaska.gov/mlw/mining/large-mines/pdf/rcindirects_dowlreport20150407.pdf
 # Mapeo todas las distancias entre puntos (oh boy)
-L = {(p, pp): distancia_puntos(puntos[p], puntos[pp]) for p in P for pp in P}
+L = {(p, pp): haversine(puntos[p], puntos[pp]) for p in P for pp in P}
 KI = leer_cantidades_iniciales(DEPOSITOS_PATH) + [0 for _ in range(len(P) - len(D))]  # 0 tons para cada posición nueva
 MCNTU = {u: randint(90, 100) for u in U}
 MCNTA = {a: randint(50, 90) for a in A}
@@ -133,3 +143,15 @@ print(f"Tiempo total: {round(time.time() - inicio)}")
 # ------   resultados   ------
 valor_objetivo = md.ObjVal
 tiempo_ejecucion = md.Runtime
+
+for p in D:
+    for pp in P:
+        if XT[p, pp].x == 1:
+            print(f"El depósito en la posición {p} se movió a {pp}")
+
+    for f in F:
+        if XF[p, f].x == 1:
+            print(f"Se aplicó el método {f} al depósito de relave en la posición {p}")
+
+    if XS[p].x == 1:
+        print(f"Se selló el depósito en {p}")

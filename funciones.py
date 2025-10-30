@@ -1,8 +1,7 @@
 import geopandas as gpd
 from shapely.geometry import Point
-from shapely import distance
 import time
-from parametros import GRADOS_A_KM
+import math
 
 
 def leer_depositos(path):
@@ -93,6 +92,13 @@ def leer_cantidades_iniciales(path):
     return cantidades
 
 
-def distancia_puntos(coords1, coords2):
-    p1, p2 = Point(coords1), Point(coords2)
-    return distance(p1, p2) * GRADOS_A_KM
+# usado para calcular la distancia entre dos puntos segun latitude y longitude
+def haversine(punto1, punto2):
+    lat1, lon1 = punto1.x, punto1.y
+    lat2, lon2 = punto2.x, punto2.y
+    R = 6371  # radio de la tierra
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    return 2 * R * math.asin(math.sqrt(a))

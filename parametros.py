@@ -11,7 +11,4 @@ AGUA_PATH = os.path.join(DATA_PATH, 'fuentes-agua', 'fuentes-agua.shp')
 PUNTOS_PATH = os.path.join(DATA_PATH, 'conjunto-puntos.csv')
 
 # usado para separar los grids una cierta cantidad (higher = closer points)
-GRID_TILES_AVG = 25
-
-# 1° = 70.5550329 km
-GRADOS_A_KM = 70.5550329
+GRID_TILES_AVG = 10

@@ -144,8 +144,8 @@ md.update()
 print("Agregando función objetivo...")
 md.setObjective(quicksum(LAMBDA[0] * quicksum(XF[p, f] for f in F) + LAMBDA[1] * XS[p] + LAMBDA[2] * C[p] for p in P), GRB.MAXIMIZE)
 print("Optimizando...")
-md.setParam(GRB.Param.DualReductions, 0)
-md.setParam(GRB.Param.Presolve, 0)
+# md.setParam(GRB.Param.DualReductions, 0)
+# md.setParam(GRB.Param.Presolve, 0)
 md.optimize()
 print(f"Tiempo total: {round(time.time() - inicio)}")
 
@@ -163,13 +163,20 @@ valor_objetivo = md.ObjVal
 tiempo_ejecucion = md.Runtime
 
 for p in P:
+    hizo_algo = False
     for pp in P:
         if XT[p, pp].x == 1:
+            hizo_algo = True
             print(f"El depósito en la posición {p} se movió a {pp}")
 
     for f in F:
         if XF[p, f].x == 1:
+            hizo_algo = True
             print(f"Se aplicó el método {f} al depósito de relave en la posición {p}")
 
     if XS[p].x == 1:
+        hizo_algo = True
         print(f"Se selló el depósito en {p}")
+
+    if not hizo_algo and p in D:
+        print(f"La posición {p} se mantuvo en el mismo lugar")

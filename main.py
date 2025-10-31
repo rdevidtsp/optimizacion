@@ -17,11 +17,11 @@ puntos, P, U, D, A = leer_puntos(PUNTOS_PATH)
 
 """
 Los conjuntos P, U, D, A son:
-P: conjunto de posibles de depósitos de relave, zonas urbanas, entre otros.
+P: conjunto de posibles de depositos de relave, zonas urbanas, entre otros.
 U: subconjunto de zonas urbanas.
-D: subconjunto de posiciones de depósitos de relaves iniciales.
+D: subconjunto de posiciones de depositos de relaves iniciales.
 A: subconjunto de posiciones de fuentes de agua
-F: conjunto de estrategias de fitorremediación aplicables
+F: conjunto de estrategias de fitorremediacion aplicables
 Las variables posP, posU, ... contienen las posiciones de las coordenadas
 dentro de la lista "puntos".
 """
@@ -41,7 +41,7 @@ CF = parametros['CFdf (USD/ton)']
 CS = parametros['CSd  (USD)'][0]
 # para ahorrar runtime (no es una variable, siempre va a ser igual para el mismo p, pp)
 L = lambda p, pp: haversine(puntos[p], puntos[pp])
-KI = parametros['Klp (ton)'] + [0 for _ in range(len(P) - len(D))]  # 0 tons para cada posición nueva
+KI = parametros['Klp (ton)'] + [0 for _ in range(len(P) - len(D))]  # 0 tons para cada posicion nueva
 MCNTU = parametros['MCNTu (µg/m3)'][0]
 MCNTA = parametros['MCNTa (mg/l)'][0]
 CNT = parametros['CNT (µg/m3)'][0]
@@ -69,7 +69,7 @@ C = md.addVars(P, lb=-GRB.INFINITY, ub=GRB.INFINITY, name="C")
 Z = md.addVars(P, vtype=GRB.CONTINUOUS, lb=0, name="Z")
 ZV = md.addVars(P, vtype=GRB.CONTINUOUS, lb=0, name="ZV")
 KA = md.addVars(pf, vtype=GRB.CONTINUOUS, lb=0, name="KA")
-Y = md.addVars(P, vtype=GRB.BINARY, name="Y")  # NEW, HAY RELAVE EN LA POSICIÓN P
+Y = md.addVars(P, vtype=GRB.BINARY, name="Y")  # NEW, HAY RELAVE EN LA POSICIoN P
 
 print(f"Done in {round(time.time() - comienzo)}s")
 
@@ -87,7 +87,7 @@ md.addConstrs(W[p, pp] <= M * XT[p, pp] for p in P for pp in P if p != pp)
 md.addConstrs(M * (1 - (XTR[p] + quicksum(XF[p, f] for f in F) + XS[p])) >= quicksum(XT[pp, p] for pp in P) for p in P)
 md.addConstrs(M * Y[p] >= quicksum(XT[p, pp] for pp in P) for p in P)  # NEW
 md.addConstrs(M * Y[p] >= 1 - XTR[p] for p in D)  # NEW, si no se ha transladado nada en d entonces es un relave (Y = 1)
-md.addConstrs(quicksum(XT[p, pp] for pp in P) <= 1 for p in P)  # NEW, se puede transladar a lo más a 1 lugar
+md.addConstrs(quicksum(XT[p, pp] for pp in P) <= 1 for p in P)  # NEW, se puede transladar a lo mas a 1 lugar
 print("- Restricciones de variables: Done")
 
 # restricciones de presupuesto
@@ -100,8 +100,8 @@ md.addConstrs(K[p] == KI[p] + quicksum(W[i, p] for i in P) - quicksum(W[p, j] fo
 md.addConstrs(K[p] <= T[p] for p in P)
 print("- Restricciones de presupuesto: Done")
 
-# restricciones de contaminación
-print("- Restricciones de contaminación")
+# restricciones de contaminacion
+print("- Restricciones de contaminacion")
 md.addConstrs(Z[p] == K[p] * CNT for p in P)
 md.addConstrs(ZV[p] - ALPHA * Z[p] <= M * (1 - XS[p]) for p in P)
 md.addConstrs(ZV[p] - ALPHA * Z[p] >= -M * (1 - XS[p]) for p in P)
@@ -114,7 +114,7 @@ md.addConstrs(quicksum(ZV[p] / L(p, a) for p in P if p != a) <= MCNTA for a in A
 md.addConstrs(MCNTU - quicksum(ZV[p] / L(p, u) for p in P if p != u) == C[u] for u in U)
 md.addConstrs(MCNTA - quicksum(ZV[p] / L(p, a) for p in P if p != a) == C[a] for a in A)
 md.addConstrs(C[p] == 0 for p in P if p not in (U + A))
-print("- Restricciones de contaminación: Done")
+print("- Restricciones de contaminacion: Done")
 
 # restricciones de distancia
 print("- Restricciones de distancia")
@@ -127,8 +127,8 @@ print(f"Done in {round(time.time() - comienzo)}s")
 
 md.update()
 
-# -------  función obj  -------
-print("Agregando función objetivo...")
+# -------  funcion obj  -------
+print("Agregando funcion objetivo...")
 md.setObjective(quicksum(LAMBDA[0] * quicksum(XF[p, f] for f in F) + LAMBDA[1] * XS[p] + LAMBDA[2] * C[p] for p in P), GRB.MAXIMIZE)
 print("Optimizando...")
 
@@ -146,25 +146,26 @@ with open(PUNTOS_SOL_PATH, 'w', encoding='utf-8') as archivo:
     for p in P:
         hizo_algo = False
         if K[p].x != 0:
-            print(f"En la posición {p} hay {K[p].x} toneladas de relave")
+            pass
+            # print(f"En la posicion {p} hay {K[p].x} toneladas de relave")
 
         for pp in P:
             if XT[p, pp].x == 1:
                 hizo_algo = True
-                print(f"El depósito en la posición {p} se movió a {pp}")
+                print(f"El deposito en la posicion {p} se movio a {pp}")
                 print(f"{puntos[pp].x},{puntos[pp].y},T", file=archivo)
 
         for f in F:
             if XF[p, f].x == 1:
                 hizo_algo = True
-                print(f"Se aplicó el método {f} al depósito de relave en la posición {p}")
+                print(f"Se aplico el metodo {f} al deposito de relave en la posicion {p}")
                 print(f"{puntos[p].x},{puntos[p].y},F{f}", file=archivo)
 
         if XS[p].x == 1:
             hizo_algo = True
-            print(f"Se selló el depósito en {p}")
+            print(f"Se sello el deposito en {p}")
             print(f"{puntos[p].x},{puntos[p].y},S", file=archivo)
 
         if not hizo_algo and p in D:
-            print(f"La posición {p} se mantuvo en el mismo lugar")
+            print(f"La posicion {p} se mantuvo en el mismo lugar")
             print(f"{puntos[p].x},{puntos[p].y},M", file=archivo)

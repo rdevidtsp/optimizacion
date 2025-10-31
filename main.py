@@ -31,28 +31,27 @@ F = [i for i in range(3)]
 # -------   parametros   -------
 parametros_archivo = pd.read_csv(PARAMETROS_PATH)
 parametros = {
-    col: [x for x in parametros_archivo[col].to_list() if not (pd.isna(x) or (isinstance(x, float) and math.isnan(x)))]
+    col: [float(x) for x in parametros_archivo[col].to_list() if not (pd.isna(x) or (isinstance(x, float) and math.isnan(x)))]
     for col in parametros_archivo.columns
 }
 
 T = parametros['Tp (ton)'] + [randint(108_735, 21_244_362) for _ in range(len(P) - len(D))]
-CT = parametros['CTd (USD/km)']
+CT = parametros['CTd (USD/km)'][0]
 CF = parametros['CFdf (USD/ton)']
-CS = parametros['CSd  (USD)'] + [randint(10_000, 100_000_000) for _ in range(len(P) - len(D))]
+CS = parametros['CSd  (USD)'][0]
 # para ahorrar runtime (no es una variable, siempre va a ser igual para el mismo p, pp)
 L = lambda p, pp: haversine(puntos[p], puntos[pp])
 KI = parametros['Klp (ton)'] + [0 for _ in range(len(P) - len(D))]  # 0 tons para cada posición nueva
-MCNTU = parametros['MCNTu (µg/m3)']
-MCNTA = parametros['MCNTa (mg/l)']
-CNT = parametros['CNT (µg/m3)']
-ALPHA = parametros['alpha']
+MCNTU = parametros['MCNTu (µg/m3)'][0]
+MCNTA = parametros['MCNTa (mg/l)'][0]
+CNT = parametros['CNT (µg/m3)'][0]
+ALPHA = parametros['alpha'][0]
 BETA = parametros['beta f']
-DM = parametros['DM (km)']  # en kilometros, distancia entre relaves
+DM = parametros['DM (km)'][0]  # en kilometros, distancia entre relaves
 # conversion: 1.5 km = 0.02126° (latitud, longitud) ; 1° = 70.5550329 km
 LAMBDA = parametros['lambda k']
-PS = parametros['PS (USD)']
+PS = parametros['PS (USD)'][0]
 M = PS
-
 
 # -------   variables    -------
 print("Creando variables...")
@@ -96,7 +95,7 @@ print("- Restricciones de presupuesto")
 md.addConstrs(KA[p, f] <= M * XF[p, f] for p in D for f in F)
 md.addConstrs(KA[p, f] <= K[p] for p in D for f in F)
 md.addConstrs(KA[p, f] >= K[p] - M * (1 - XF[p, f]) for p in D for f in F)
-md.addConstr(quicksum(quicksum(W[p, pp] * L(p, pp) for pp in P) * CT[p] + quicksum(KA[p, f] * CF[f][p] for f in F) + XS[p] * CS[p] for p in P) <= PS)
+md.addConstr(quicksum(quicksum(L(p, pp) * CT * XT[p, pp] for pp in P) + quicksum(KA[p, f] * CF[f] for f in F) + XS[p] * CS for p in P) <= PS)
 md.addConstrs(K[p] == KI[p] + quicksum(W[i, p] for i in P) - quicksum(W[p, j] for j in P) for p in P)
 md.addConstrs(K[p] <= T[p] for p in P)
 print("- Restricciones de presupuesto: Done")
@@ -110,10 +109,10 @@ md.addConstrs(ZV[p] - BETA[f] * Z[p] <= M * (1 - XF[p, f]) for p in P for f in F
 md.addConstrs(ZV[p] - BETA[f] * Z[p] >= -M * (1 - XF[p, f]) for p in P for f in F)
 md.addConstrs(ZV[p] - Z[p] <= M * (quicksum(XF[p, f] for f in F) + XS[p]) for p in P)
 md.addConstrs(ZV[p] - Z[p] >= -M * (quicksum(XF[p, f] for f in F) + XS[p]) for p in P)
-md.addConstrs(quicksum(ZV[p] / L(p, u) for p in P if p != u) <= MCNTU[u] for u in U)
-md.addConstrs(quicksum(ZV[p] / L(p, a) for p in P if p != a) <= MCNTA[a] for a in A)
-md.addConstrs(MCNTU[u] - quicksum(ZV[p] / L(p, u) for p in P if p != u) == C[u] for u in U)
-md.addConstrs(MCNTA[a] - quicksum(ZV[p] / L(p, a) for p in P if p != a) == C[a] for a in A)
+md.addConstrs(quicksum(ZV[p] / L(p, u) for p in P if p != u) <= MCNTU for u in U)
+md.addConstrs(quicksum(ZV[p] / L(p, a) for p in P if p != a) <= MCNTA for a in A)
+md.addConstrs(MCNTU - quicksum(ZV[p] / L(p, u) for p in P if p != u) == C[u] for u in U)
+md.addConstrs(MCNTA - quicksum(ZV[p] / L(p, a) for p in P if p != a) == C[a] for a in A)
 md.addConstrs(C[p] == 0 for p in P if p not in (U + A))
 print("- Restricciones de contaminación: Done")
 
